@@ -32,6 +32,7 @@ day_trading_screener/
 Step-by-Step: Set Up Git for Your ML Project
 1. Create the Project Folder (if not already done)
 2. Initialize Git run bash git init in side project directory
+    git init
 3. Create a .gitignore File
     # Python
     *.pyc
@@ -52,9 +53,11 @@ Step-by-Step: Set Up Git for Your ML Project
 
     # VSCode
     .vscode/
-4. Commit Your Initial Code
+
+4. Commit Your Initial Code  
     git add .
     git commit -m "Initial commit: project structure and dependencies"
+
 5. Create GitHub Repo (Manually or CLI)
 Manual:
     Go to https://github.com/new
@@ -67,16 +70,25 @@ Link Remote and Push
     git push -u origin main
 
 6. Add a README.md    
-    # Bullish Trend Prediction ML Project
+    # Day Trading Screener
 
-    This project uses technical and fundamental indicators to predict bullish stock trends using supervised machine learning. Data is sourced from Financial Modeling Prep (FMP).
+    A day trading stock screener using real-time market data and PostgreSQL.
 
-    ## Project Goals
-    - Create a labeled dataset from historical data
-    - Train ML models to predict bullish outcomes
-    - Deploy model for daily scoring and alerting
+    ## Features
+    - Core and technical filters for intraday momentum
+    - PostgreSQL schema for screener runs, results, technicals, and caching
+    - Output to XLSX for inspection or reporting
+    - Modular and testable with pytest
 
     ## Setup
+    1. Create `.env` file based on `.env.example`
+    2. Create a virtual environment:
+    python -m venv .venv
+    .venv/Scripts/activate 
+    pip install -r requirements.txt
+    3. Run the schema setup
+
+    4. Run tests
 
 Create requirements.txt and install libraries to the Environment   
 Recommended requirements.txt for Your Project
