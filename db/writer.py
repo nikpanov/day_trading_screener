@@ -1,4 +1,7 @@
 from db import get_connection
+from utils.logger import setup_logger
+
+logger = setup_logger()
 
 def save_run_and_results(rows, run_timestamp):
     from psycopg2.extras import execute_values
@@ -37,3 +40,4 @@ def save_run_and_results(rows, run_timestamp):
                 """, values)
     finally:
         conn.close()
+        logger.info(f"Saved {len(rows)} results for run {run_id} at {run_timestamp}")

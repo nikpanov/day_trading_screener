@@ -1,3 +1,8 @@
+from utils.logger import setup_logger
+
+logger = setup_logger()
+
+
 def is_bullish(stock_price: float, indicators: dict) -> bool:
     """
     Apply bullish filter:
@@ -21,4 +26,5 @@ def is_bullish(stock_price: float, indicators: dict) -> bool:
         )
     except Exception as e:
         print(f"⚠️ Error applying bullish filter: {e}")
+        logger.error(f"Error applying bullish filter: {e}")
         return False

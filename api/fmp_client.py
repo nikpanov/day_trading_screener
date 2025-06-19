@@ -4,7 +4,12 @@ from dotenv import load_dotenv
 from db import get_connection
 from datetime import datetime
 import pandas as pd
-from utils import is_bullish
+from utils.filters import is_bullish   
+
+from utils.logger import setup_logger
+
+
+logger = setup_logger()
 
 # Load environment variables from .env
 load_dotenv()
@@ -34,6 +39,7 @@ def fetch_core_screener(limit=50):
         return data
     except Exception as e:
         print(f"❌ Screener API Error: {e}")
+        logger.error(f"Screener API Error: {e}")
         return []
 
 
@@ -60,9 +66,11 @@ def fetch_technicals(symbol: str) -> dict | None:
             if isinstance(data, list) and data:
                 return float(data[0].get(indicator))
             print(f"⚠️ No data for {symbol} {indicator}")
+            logger.warning(f"No data for {symbol} {indicator}")
             return None
         except Exception as e:
             print(f"⚠️ API error for {symbol} {indicator}: {e}")
+            logger.error(f"API error for {symbol} {indicator}: {e}")
             return None
 
     indicators = {
@@ -97,16 +105,19 @@ def fetch_vwap_from_eod(symbol: str) -> float | None:
             historical = data  # just assume it's the full list
         else:
             print(f"⚠️ Unexpected response type for {symbol}: {type(data)}")
+            logger.error(f"Unexpected response type for {symbol}: {type(data)}")
             return None
 
         if historical and isinstance(historical[0], dict) and "vwap" in historical[0]:
             return float(historical[0]["vwap"])
 
         print(f"⚠️ No VWAP found in EOD data for {symbol}")
+        logger.warning(f"No VWAP found in EOD data for {symbol}")
         return None
 
     except Exception as e:
         print(f"⚠️ Error fetching EOD VWAP for {symbol}: {e}")
+        logger.error(f"Error fetching EOD VWAP for {symbol}: {e}")
         return None
 
 
@@ -115,6 +126,7 @@ def fetch_vwap_from_eod(symbol: str) -> float | None:
 if __name__ == "__main__":
     results = fetch_core_screener(limit=5)
     print(f"✅ Retrieved {len(results)} stocks")
+    logger.info(f"Retrieved {len(results)} stocks from screener")
 
     # Add these before your for-loop
     all_results = []
@@ -131,11 +143,13 @@ if __name__ == "__main__":
 
         if not indicators:
             print("⚠️ No technical data — skipping.")
+            logger.warning(f"No technical data for {symbol} — skipping.")
             continue
 
         bullish = is_bullish(price, indicators)
         if bullish:
             print("✅ Bullish signal!")
+            logger.info(f"Bullish signal for {symbol} at {run_timestamp}")
 
         # collect result
         all_results.append({
@@ -148,3 +162,4 @@ if __name__ == "__main__":
         })
 
         print(f"📊 Technicals: {techs}")
+        logger.info(f"Technical indicators for {symbol}: {indicators} completed")
