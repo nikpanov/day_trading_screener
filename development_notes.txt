@@ -1,0 +1,179 @@
+Project Structure in Visual Studio Code (VSC)
+
+day_trading_screener/
+│
+├── config/
+│   └── __init__.py
+│
+├── db/
+│   ├── __init__.py
+│   └── setup_schema.py
+│
+├── logs/
+│   └── app.log
+│
+├── output/
+│   └── (generated .xlsx reports)
+│
+├── tests/
+│   ├── __init__.py
+│   └── test_db_connection.py
+│
+├── .env
+├── .gitignore
+├── main.py
+├── README.md
+├── requirements.txt
+├── pytest.ini
+└── .venv/  (your virtual environment, not committed)
+
+
+
+Step-by-Step: Set Up Git for Your ML Project
+1. Create the Project Folder (if not already done)
+2. Initialize Git run bash git init in side project directory
+3. Create a .gitignore File
+    # Python
+    *.pyc
+    __pycache__/
+    .venv/
+    venv/
+
+    # Jupyter
+    .ipynb_checkpoints/
+
+    # Data & models
+    data/raw/
+    data/processed/
+    models/
+
+    # Environment
+    .env
+
+    # VSCode
+    .vscode/
+4. Commit Your Initial Code
+    git add .
+    git commit -m "Initial commit: project structure and dependencies"
+5. Create GitHub Repo (Manually or CLI)
+Manual:
+    Go to https://github.com/new
+    Create a public or private repo (e.g., bullish_ml_project)
+    Do not check "Initialize with README" (since we already have files)
+
+Link Remote and Push
+    git remote add origin https://github.com/YOUR_USERNAME/bullish_ml_project.git
+    git branch -M main
+    git push -u origin main
+
+6. Add a README.md    
+    # Bullish Trend Prediction ML Project
+
+    This project uses technical and fundamental indicators to predict bullish stock trends using supervised machine learning. Data is sourced from Financial Modeling Prep (FMP).
+
+    ## Project Goals
+    - Create a labeled dataset from historical data
+    - Train ML models to predict bullish outcomes
+    - Deploy model for daily scoring and alerting
+
+    ## Setup
+
+Create requirements.txt and install libraries to the Environment   
+Recommended requirements.txt for Your Project
+    pandas
+    numpy
+    requests
+    scikit-learn
+    xgboost
+    ta
+    matplotlib
+    seaborn
+    python-dotenv
+
+pip install -r requirements.txt
+
+What Each Package Is For
+| Package         | Purpose                                                         |
+| --------------- | --------------------------------------------------------------- |
+| `pandas`        | Data handling, DataFrame operations                             |
+| `numpy`         | Numerical operations, arrays                                    |
+| `requests`      | Fetch data from the FMP API                                     |
+| `scikit-learn`  | ML models: LogisticRegression, RandomForest, evaluation metrics |
+| `xgboost`       | Gradient Boosting model, often superior for tabular data        |
+| `ta`            | Technical Analysis indicators (RSI, MACD, ADX, etc.)            |
+| `matplotlib`    | Visualization                                                   |
+| `seaborn`       | Statistical data plotting (correlations, distributions)         |
+| `python-dotenv` | Load API keys from a `.env` file safely                         |
+
+
+
+To Run  Project in bash
+PYTHONPATH=. python main.py
+
+You should see:
+    FMP download
+    data/processed/AAPL_labeled.csv created (or another ticker)
+    A column bullish_label with 1 where the price rose ≥10% in 10 days
+
+Guaranteed Bullish Examples (Last Year) -----------------------    
+
+NVDA (NVIDIA)
+📈 Exploded from ~$150 (Jan 2023) to over $900 by mid-2024
+Many 10%+ jumps in short spans, especially:
+🔹 Feb–Mar 2024
+🔹 May 2024 (earnings rally)
+
+2. SMCI (Super Micro Computer)
+🚀 One of the fastest-growing AI hardware stocks
+Multiple +20% moves in 3–5 day windows in early 2024
+
+3. META (Meta Platforms)
+Sharp growth after positive earnings and AI announcements
+Look at Jan–Feb 2024
+
+4. TSLA (Tesla)
+Volatile but often has sharp upside moves
+Check Oct 2023 and Feb 2024
+
+How Much History Do You Really Need? -----------------------------
+Use Case	                Recommended History
+Manual test & debugging	    250–500 days (1 year)
+Training a real ML model	2–5 years (≈500–1,250 trading days)
+Long-term pattern analysis	5+ years
+
+📝 There are ~252 trading days in a year, so 1250 ≈ 5 years
+
+Stage 2: Compute technical indicators like RSI, MACD, SMA, etc. using the ta library and add those as features.
+What Stage 2 Includes:
+Input:
+    The labeled dataset from Stage 1: price history + bullish_label
+    Each row = a stock on a date
+Process:
+    Compute indicators like RSI, MACD, 50/200-day SMA, Volume trends, etc.
+    Add each as a column (rsi_14, macd_signal_diff, sma_50_over_sma_200, etc.)
+    Keep the label (bullish_label) as the target
+    📌 The model will learn how to weigh them — no more static thresholds or human-picked weights.
+Output:
+    A DataFrame with one row per date per stock:
+    date | close | rsi_14 | macd_diff | sma_50 | sma_200 | ... | bullish_label
+
+Why This Works Better    
+| Traditional Rules         | ML-Based Approach                        |
+| ------------------------- | ---------------------------------------- |
+| You define rules manually | Model learns patterns from the data      |
+| Hard to tune weights      | Model optimizes importance automatically |
+| Doesn’t adapt to market   | Can retrain as market behavior evolves   |
+
+So instead of saying:
+    “Bullish = RSI < 30 and MACD > 0 and Price > 200-SMA”
+…we say:
+    “Here are RSI, MACD, SMA, and price — let the model learn what matters.”
+
+Stage 2 Goals -------------------------------------- accomplished!
+    Compute indicators with the ta library (technical analysis)
+    Merge them into your labeled dataset
+    Clean & normalize the features
+    Save the final training dataset    
+
+
+
