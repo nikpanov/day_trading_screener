@@ -1,11 +1,10 @@
 from db import get_connection
 from utils.logger import setup_logger
+from psycopg2.extras import execute_values
 
 logger = setup_logger()
 
-def save_run_and_results(rows, run_timestamp):
-    from psycopg2.extras import execute_values
-
+def save_run_and_results(rows, run_timestamp): 
     conn = get_connection()
     try:
         with conn:

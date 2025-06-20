@@ -4,15 +4,16 @@ from runner.screener_runner import run_screener
 from utils.logger import setup_logger
 
 def main():
-    parser = argparse.ArgumentParser(description="Run the day trading screener.")
-    parser.add_argument("--debug", action="store_true", help="Enable debug-level logging")
-    parser.add_argument("--limit", type=int, default=50, help="Number of tickers to fetch from screener")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--limit", type=int, default=50)
+    parser.add_argument("--tighten", action="store_true", help="Apply optional filters: beta > 1, market cap >= 2B, pre-market change > 1%")
     args = parser.parse_args()
 
+    # Set log level based on --debug
     log_level = logging.DEBUG if args.debug else logging.INFO
-    setup_logger(level=log_level)
-
-    run_screener(limit=args.limit)
+    logger = setup_logger(level=log_level)
+    run_screener(limit=args.limit, use_optional_filters=args.tighten)
 
 if __name__ == "__main__":
     main()

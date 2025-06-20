@@ -4,8 +4,7 @@ from dotenv import load_dotenv
 from db import get_connection
 from datetime import datetime
 import pandas as pd
-from utils.filters import is_bullish   
-
+from utils.filters import is_bullish 
 from utils.logger import setup_logger
 
 
@@ -17,6 +16,32 @@ FMP_API_KEY = os.getenv("FMP_API_KEY")
 
 BASE_URL = "https://financialmodelingprep.com/api/v3"
 
+def fetch_fundamentals(symbol):
+    try:
+        url = f"{BASE_URL}/profile/{symbol}?apikey={FMP_API_KEY}"
+        response = requests.get(url)
+        data = response.json()
+        if isinstance(data, list) and data:
+            item = data[0]
+            return {
+                "beta": item.get("beta"),
+                "market_cap": item.get("mktCap"),
+            }
+    except Exception as e:
+        print(f"Error fetching fundamentals for {symbol}: {e}")
+    return {}
+
+def fetch_pre_market_change(symbol):
+    try:
+        url = f"{BASE_URL}/quote/{symbol}?apikey={FMP_API_KEY}"
+        response = requests.get(url)
+        data = response.json()
+        if isinstance(data, list) and data:
+            item = data[0]
+            return item.get("changesPercentage")
+    except Exception as e:
+        print(f"Error fetching pre-market change for {symbol}: {e}")
+    return None
 
 def fetch_core_screener(limit=50):
     """
