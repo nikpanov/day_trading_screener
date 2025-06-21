@@ -3,6 +3,7 @@ import logging
 from runner.screener_runner import run_screener
 from utils.logger import setup_logger
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
@@ -12,8 +13,8 @@ def main():
 
     # Set log level based on --debug
     log_level = logging.DEBUG if args.debug else logging.INFO
-    logger = setup_logger(level=log_level)
-    run_screener(limit=args.limit, use_optional_filters=args.tighten)
+  
+    run_screener(limit=args.limit, use_optional_filters=args.tighten, log_level=log_level)
 
 if __name__ == "__main__":
     main()

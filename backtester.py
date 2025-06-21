@@ -1,12 +1,10 @@
-import os
 import pandas as pd
 from datetime import datetime, timedelta
 from db import get_connection
 from utils.logger import setup_logger
 from api.fmp_client import fetch_historical_prices
-from openpyxl.styles import PatternFill
 from openpyxl.utils.dataframe import dataframe_to_rows
-from openpyxl import Workbook
+from utils.exporter import export_backtest_results_to_excel
 
 logger = setup_logger("backtester")
 
@@ -62,42 +60,5 @@ def run_backtest():
     logger.info(f"Backtest complete. Inserted {len(results)} results.")
 
     # Export to Excel
-    export_to_excel(results)
+    export_backtest_results_to_excel(results, datetime.now())
 
-def export_to_excel(results):
-    os.makedirs("output", exist_ok=True)
-    df = pd.DataFrame(results, columns=[
-        "symbol", "signal_date", "buy_price", "sell_price", "sell_date", "gain_pct", "holding_days", "result"
-    ])
-    filename = f"output/backtest_results_{datetime.now().strftime('%Y-%m-%d_%H%M')}.xlsx"
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Backtest Results"
-
-    for r_idx, row in enumerate(dataframe_to_rows(df, index=False, header=True), start=1):
-        ws.append(row)
-
-        if r_idx == 1:
-            # Bold header row
-            for cell in ws[r_idx]:
-                cell.font = cell.font.copy(bold=True)
-            continue
-
-        result = df.loc[r_idx - 2, "result"]
-        if result == "win":
-            fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-        elif result == "loss":
-            fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
-        else:
-            fill = None
-
-        if fill:
-            for cell in ws[r_idx]:
-                cell.fill = fill
-
-    wb.save(filename)
-    print(f"\U0001f4e4 Exported backtest results to Excel: {filename}")
-
-if __name__ == "__main__":
-    run_backtest()
