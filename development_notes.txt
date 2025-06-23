@@ -187,5 +187,36 @@ Stage 2 Goals -------------------------------------- accomplished!
     Clean & normalize the features
     Save the final training dataset    
 
+=================== Current
+✅ Screener Operation Workflow
+🕒 1. Scheduled Execution
+The screener is scheduled to run every 15 minutes during trading hours.
 
+Executed by scheduler.py using run_screener(...).
+
+Option to tweak interval using --interval.
+
+📥 2. Initial Cache Population
+At first (startup or once a day), cache is filled:
+
+✅ screener_cache: stores fundamentals (beta, market cap, etc.)
+
+✅ premarket_cache: stores pre-market % change
+
+These are fetched in chunks (with limit) to reduce API load.
+
+🔁 3. Reuse + Refresh on Subsequent Runs
+Each run:
+
+Pulls ticker batch using rotation strategy
+
+Fetches new technical indicators
+
+Reuses screener_cache + premarket_cache unless expired or missing
+
+📄 Output
+💾 Database
+✅ Every screener run is stored in PostgreSQL (screener_run, screener_result)
+
+📊 Excel Files
 
