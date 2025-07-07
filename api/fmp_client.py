@@ -16,6 +16,16 @@ FMP_API_KEY = os.getenv("FMP_API_KEY")
 
 BASE_URL = "https://financialmodelingprep.com/api/v3"
 
+# new
+def fetch_historical_prices(symbol: str, interval: str = "1day", limit: int = 100):
+    api_key = os.getenv("FMP_API_KEY")
+    url = f"https://financialmodelingprep.com/api/v3/historical-price-full/{symbol}?apikey={api_key}&serietype=line"
+    response = requests.get(url)
+    if response.ok:
+        data = response.json().get("historical", [])[:limit]
+        return pd.DataFrame(data).sort_values("date")
+    return None
+
 def fetch_fundamentals(symbol):
     try:
         url = f"{BASE_URL}/profile/{symbol}?apikey={FMP_API_KEY}"
