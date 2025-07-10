@@ -16,7 +16,6 @@ def is_market_open():
 def get_dynamic_interval():
     now = datetime.now(pytz.timezone("US/Eastern")).time()
 
-    # Market open-close window
     if dt_time(9, 30) <= now < dt_time(10, 0):     # First 30 min after open
         return 15
     elif dt_time(10, 0) <= now < dt_time(15, 30):  # Midday
@@ -59,25 +58,28 @@ def main():
     parser.add_argument("--limit", type=int, default=50)
     parser.add_argument("--tighten", action="store_true")
     parser.add_argument("--interval", type=int, default=15, help="Minutes between screener runs")
+    parser.add_argument("--test-mode", action="store_true", help="Run one dry cycle for test purposes")
     args = parser.parse_args()
 
-    # Setup rotating logger
     log_level = logging.DEBUG if args.debug else logging.INFO
     logger = setup_logger(level=log_level)
-    logger.handlers = []  # Clear existing
+    logger.handlers = []
 
-    # File handler with rotation
     file_handler = RotatingFileHandler("logs/app.log", maxBytes=5_000_000, backupCount=5)
     file_handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s"))
     file_handler.setLevel(log_level)
 
-    # Console handler
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s"))
     console_handler.setLevel(log_level)
 
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
+
+    if args.test_mode:
+        print(f"[TEST MODE] Market open? {is_market_open()}")
+        print(f"[TEST MODE] Dynamic interval: {get_dynamic_interval()}")
+        return
 
     schedule_runner(limit=args.limit, tighten=args.tighten, interval_minutes=args.interval)
 

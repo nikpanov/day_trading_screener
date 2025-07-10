@@ -220,3 +220,60 @@ Reuses screener_cache + premarket_cache unless expired or missing
 
 📊 Excel Files
 
+========== Unit tests succeded.
+| Entry Point                        | Description                       |
+| ---------------------------------- | --------------------------------- |
+| `main.py`                          | One-time screener run             |
+| `scheduler.py`                     | Periodic runs during market hours |
+| `db/ticker_rotation_import_fmp.py` | Ticker import from FMP            |
+| `db/backtester.py`                 | Historical backtest execution     |
+
+for production run:
+
+Open Task Scheduler (search in Start Menu)
+Create a new task:
+Go to Action > Create Basic ask
+Name: Day Trading Screener
+Trigger: Daily, 9:30 AM (set to run only on weekdays)
+Action: Start a program
+Set the program to run:
+"F:\Nick\My Code\trading\day_trading_screener\start_scheduler.bat"
+Start in:
+F:\Nick\My Code\trading\day_trading_screener
+
+===============================================
+Single Run Test
+➡️ Run main.py manually or in test mode to simulate one full screener cycle.
+🔁 It:
+Pulls tickers from rotation
+Fetches fundamentals & technicals
+Applies filters
+Logs results
+💾 Saves to:
+PostgreSQL tables (screener_run, stock_result)
+Excel (output/screener_results/...xlsx)
+
+💻 Command:
+bash
+cd "F:/Nick/My Code/trading/day_trading_screener"
+python main.py --debug --limit 50 --tighten
+
+Comments for switches: 
+--debug → sets logging to DEBUG level
+--limit 25 → analyze 25 tickers instead of 50
+--tighten → enables optional filters (beta > 1, market cap > 2B, etc.)
+=================================================
+ Continuous Run (Production Mode)
+➡️ Run scheduler.py via Task Scheduler to automatically:
+Start at 9:30 AM ET
+Loop through screener runs
+Adjust interval during market hours (15/30/15 mins)
+Sleep if market closed
+
+🧠 Uses:
+run_screener() just like main.py
+Logging to logs/app.log
+Dynamic interval control
+Automatically saves every result to DB + Excel
+🔁 Automatically loops all day until 4:00 PM ET
+

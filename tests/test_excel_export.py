@@ -1,6 +1,8 @@
 import pandas as pd
-from output.export import export_screener_results_to_excel
+import os
+from utils.exporter import export_screener_results_to_excel
 import pytest
+from datetime import datetime
 
 @pytest.fixture
 def sample_results_df():
@@ -10,7 +12,8 @@ def sample_results_df():
         "score": [85, 60]
     })
 
-def test_export_excel_structure(tmp_path, sample_results_df):
-    output_path = tmp_path / "results.xlsx"
-    export_screener_results_to_excel(sample_results_df, output_path)
-    assert output_path.exists()
+def test_export_excel_structure(sample_results_df):
+    now = datetime(2025, 7, 7, 12, 0)
+    export_screener_results_to_excel(sample_results_df, now)
+    expected_filename = f"output/screener_results/screener_results_{now.strftime('%Y-%m-%d_%H%M')}.xlsx"
+    assert os.path.exists(expected_filename)
