@@ -1,13 +1,19 @@
 # scheduler.py
 import argparse
 import time
-from datetime import datetime, timezone
 from runner.screener_runner import run_screener
 from utils.logger import setup_logger
 from logging.handlers import RotatingFileHandler
 import logging
 from datetime import datetime, time as dt_time
 import pytz
+from datetime import datetime, timedelta, timezone  # keep this for utc
+from pytz import timezone as pytz_timezone          # alias this
+
+ET = pytz_timezone ("US/Eastern")
+
+def now_et():
+    return datetime.now(ET)
 
 def is_market_open():
     now = datetime.now(pytz.timezone("US/Eastern")).time()
@@ -32,8 +38,10 @@ def schedule_runner(limit, tighten, interval_minutes):
     try:
         while True:
             if is_market_open():
-                run_timestamp = datetime.now(timezone.utc)
-                logger.info(f"Triggering run_screener() at {run_timestamp}")
+                run_timestamp = now_et()
+                # logger.info(f"Triggering run_screener() at {run_timestamp}")
+                logger.info(f"Triggering run_screener() at {run_timestamp.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+
                 interval = get_dynamic_interval()
                 if interval is None:
                     logger.info("Market closed. Sleeping for 5 minutes...")

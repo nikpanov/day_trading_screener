@@ -4,8 +4,15 @@ from openpyxl.styles import PatternFill, Font
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl import Workbook
 from utils.logger import setup_logger
-# from datetime import datetime, timedelta
 from emailer.notify import send_email_with_attachment
+from datetime import datetime, timedelta, timezone  # keep this for utc
+from pytz import timezone as pytz_timezone          # alias this
+
+
+ET = pytz_timezone("US/Eastern")  # ✅ safe and correct
+
+def now_et():
+    return datetime.now(ET)
 
 logger = setup_logger()
 
@@ -13,6 +20,8 @@ def export_screener_results_to_excel(rows, run_timestamp):
     os.makedirs("output/screener_results", exist_ok=True)
     df = pd.DataFrame(rows)
 
+    run_timestamp = now_et()
+    
     expected_columns = [
         "symbol", "company_name", "price", "rsi14", "ema20", "ema50", "vwap",
         "is_bullish", "failure_reason", "timestamp"

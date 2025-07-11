@@ -10,10 +10,11 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 EMAIL_SENDER = os.getenv("EMAIL_SENDER")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 EMAIL_RECIPIENT = os.getenv("EMAIL_RECIPIENT")
+EMAIL_USER = os.getenv("EMAIL_USER", EMAIL_SENDER)  # Fallback to EMAIL_SENDER if not set
 
 
 def send_email_with_attachment(subject, body, attachment_path):
-    if not (EMAIL_SENDER and EMAIL_PASSWORD and EMAIL_RECIPIENT):
+    if not (EMAIL_SENDER and EMAIL_PASSWORD and EMAIL_RECIPIENT and EMAIL_USER):
         logger.warning("Email credentials or recipient not set. Skipping email notification.")
         return
 
@@ -32,7 +33,7 @@ def send_email_with_attachment(subject, body, attachment_path):
 
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as smtp:
             smtp.starttls()
-            smtp.login(EMAIL_SENDER, EMAIL_PASSWORD)
+            smtp.login(EMAIL_USER, EMAIL_PASSWORD)
             smtp.send_message(msg)
 
         logger.info(f"Email with attachment '{file_name}' sent to {EMAIL_RECIPIENT}")
