@@ -6,7 +6,15 @@ from datetime import datetime
 import pandas as pd
 from utils.filters import is_bullish 
 from utils.logger import setup_logger
+from utils.ratelimiter import RateLimiter
 
+# 5 requests per second
+screener_limiter = RateLimiter(5, 1)
+historical_limiter = RateLimiter(5, 1)
+tech_limiter = RateLimiter(5, 1)
+fund_limiter = RateLimiter(5, 1)
+premarket_limiter = RateLimiter(5, 1)
+vwap_limiter = RateLimiter(5, 1)
 
 logger = setup_logger()
 
@@ -18,6 +26,7 @@ BASE_URL = "https://financialmodelingprep.com/api/v3"
 
 # new
 def fetch_historical_prices(symbol: str, interval: str = "1day", limit: int = 100):
+    historical_limiter.wait()
     api_key = os.getenv("FMP_API_KEY")
     url = f"https://financialmodelingprep.com/api/v3/historical-price-full/{symbol}?apikey={api_key}&serietype=line"
     response = requests.get(url)
@@ -27,6 +36,8 @@ def fetch_historical_prices(symbol: str, interval: str = "1day", limit: int = 10
     return None
 
 def fetch_fundamentals(symbol):
+    fund_limiter.wait()
+
     try:
         url = f"{BASE_URL}/profile/{symbol}?apikey={FMP_API_KEY}"
         response = requests.get(url)
@@ -42,6 +53,7 @@ def fetch_fundamentals(symbol):
     return {}
 
 def fetch_pre_market_change(symbol):
+    premarket_limiter.wait()
     try:
         url = f"{BASE_URL}/quote/{symbol}?apikey={FMP_API_KEY}"
         response = requests.get(url)
@@ -57,6 +69,7 @@ def fetch_core_screener(limit=50):
     """
     Fetch stocks that pass core day trading filters.
     """
+    screener_limiter.wait()
     url = f"{BASE_URL}/stock-screener"
     params = {
         "apikey": FMP_API_KEY,
@@ -83,6 +96,8 @@ def fetch_technicals(symbol: str) -> dict | None:
     Fetch RSI14, EMA20, EMA50, VWAP using FMP's stable endpoint.
     Returns a dictionary or None if all data is missing.
     """
+    tech_limiter.wait()
+
     def get_tech(indicator: str, period_length=None, timeframe="15min"):
         url = f"https://financialmodelingprep.com/stable/technical-indicators/{indicator}"
         
@@ -123,6 +138,7 @@ def fetch_vwap_from_eod(symbol: str) -> float | None:
     """
     Fetches latest daily VWAP value from EOD full price history.
     """
+    vwap_limiter.wait()
     url = f"https://financialmodelingprep.com/stable/historical-price-eod/full"
     params = {
         "symbol": symbol,

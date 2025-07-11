@@ -276,4 +276,112 @@ Logging to logs/app.log
 Dynamic interval control
 Automatically saves every result to DB + Excel
 🔁 Automatically loops all day until 4:00 PM ET
+*********************************************************** NEXT ROUND *************************
+🔧 Core Execution Scripts
+main.py – likely the entry point for running the screener.
 
+scheduler.py – manages execution timing during market hours.
+
+runner/screener_runner.py – core orchestration logic for running the screener.
+
+🧠 Screener Logic & Utilities
+utils/filters.py – implements is_bullish and optional filters.
+
+utils/exporter.py – handles Excel output.
+
+utils/logger.py – custom logging configuration.
+
+🌐 API Interaction
+api/fmp_client.py – interfaces with Financial Modeling Prep (FMP) API.
+
+🛢️ Database Integration
+db/writer.py – saves scan results and run metadata.
+
+db/cache.py – manages caching of API results.
+
+db/setup_schema.py – initializes schema if needed.
+
+db/ticker_rotation_import_*.py – ticker list importers (CSV and FMP).
+
+✉️ Email Notifications
+emailer/notify.py – email functionality (e.g., alerts for bullish tickers).
+
+🧪 Testing
+tests/ – unit tests for every major module.
+
+⚙️ Configuration
+config/settings.py – defines constants, config variables.
+
+.venv/ – virtual environment (ignored in analysis).
+
+🧾 Backtesting
+backtester.py, backtester_old.py – historical performance testing.
+--------------------------------------------------------------------------
+ main.py – Entry Point
+This script coordinates the screener execution process. Key responsibilities:
+
+Configures CLI argument parsing using argparse:
+--limit: Number of tickers to screen (default: 50) full run --2500
+--use-optional-filters: Toggles additional filters
+--debug: Enables verbose logging
+
+Calls run_screener(...) with the parsed options:
+run_screener(limit=args.limit, use_optional_filters=args.use_optional_filters, log_level=log_level)
+
+🔹 screener_runner.py – Core Orchestration
+This is the main workflow engine. Key components:
+
+🔧 Setup
+Imports:
+API: fetch_core_screener, fetch_technicals, fetch_fundamentals, fetch_pre_market_change
+Filters: is_bullish
+DB: save_run_and_results, upsert_screener_cache, upsert_premarket_cache
+Export: export_screener_results_to_excel
+Logger setup via setup_logger()
+now_et() handles Eastern Time using pytz
+
+⚙️ run_screener(...) Logic
+Start Time & Logging
+Logs current time and options.
+Fetch Core Screener Data
+From FMP using fetch_core_screener(limit)
+Optionally Apply Custom Filters
+If use_optional_filters is True
+Parallel Processing (ThreadPool)
+Iterates over tickers using ThreadPoolExecutor
+
+Each worker:
+Fetches pre-market, technical, and fundamental data
+Caches them
+Runs is_bullish(...)
+Collects results
+Persistence
+Saves to DB via save_run_and_results(...)
+Exports Excel with timestamped filename
+Summary Logging
+Number of bullish tickers detected
+Execution time
+
+✅ Current Strengths
+Clean modular structure with separation of concerns.
+Multi-threaded ticker evaluation.
+Flexible CLI + logger integration.
+Results stored and exported properly.
+
+⚠️ Bottlenecks & Next Steps
+The current system:
+Hits the FMP API per ticker in parallel (risks throttling/ban)
+Lacks rate limiting, retry logic, or API batch usage (where possible)
+Does not chunk or paginate the ticker list
+
+Would you like a proposal and code changes for:
+Throttling (rate limiting) per API type?
+Chunking (batch mode) for initial core screener fetch and analysis loop?
+Retry/backoff logic?
+
+We can tackle them in sequence. 
+Summary of Step 1 – Throttling
+You now have:
+Per-function RateLimiters in fmp_client.py
+Protection against exceeding FMP’s rate limits
+Compatibility with multi-threaded execution via ThreadPoolExecutor
