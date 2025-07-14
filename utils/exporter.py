@@ -66,7 +66,7 @@ def export_screener_results_to_excel(rows, run_timestamp):
 
     try:
         wb.save(filename)
-        print(f"📤 Exported screener results to Excel: {filename}")
+        print(f"Exported screener results to Excel: {filename}")
         logger.info(f"Exported screener results to Excel: {filename}")
     except Exception as e:
         logger.error(f"Failed to save Excel file: {e}")
@@ -76,18 +76,33 @@ def export_screener_results_to_excel(rows, run_timestamp):
     # ✅ Email Summary Section
     try:
         total_scanned = len(df)
+        bullish_df = df[df["is_bullish"] == True]
         bullish_count = df["is_bullish"].sum()
 
+        # 🔹 Compose bullish list if any
+        if not bullish_df.empty:
+            bullish_lines = "\n".join(
+                f"  - {row['symbol']}: ${row['price']} ({row['company_name']})"
+                for _, row in bullish_df.iterrows()
+            )
+            bullish_text = f"\n🟢 Bullish tickers:\n{bullish_lines}"
+        else:
+            bullish_text = "\n🟡 No bullish tickers detected."
+
+        # 🔹 Failure reasons breakdown
         failure_summary = df["failure_reason"].value_counts(dropna=True)
         failure_lines = "\n".join(f"  - {reason}: {count}" for reason, count in failure_summary.items())
         failure_text = f"\n⚠️ Failure reasons:\n{failure_lines}" if not failure_summary.empty else ""
 
+        # 🔹 Final body
         body = (
             f"📊 Screener run completed.\n\n"
             f"✅ Bullish tickers found: {bullish_count}\n"
             f"🔍 Total tickers scanned: {total_scanned}\n"
-            f"{failure_text}"
+            f"{bullish_text}"
+           # f"{failure_text}"
         )
+
 
         send_email_with_attachment(
             subject="📈 Screener Results Available",
@@ -145,7 +160,7 @@ def export_screener_results_to_excel(rows, run_timestamp):
 
     try:
         wb.save(filename)
-        print(f"📤 Exported screener results to Excel: {filename}")
+        print(f"Exported screener results to Excel: {filename}")
         logger.info(f"Exported screener results to Excel: {filename}")
     except Exception as e:
         logger.error(f"Failed to save Excel file: {e}")
@@ -193,7 +208,7 @@ def export_backtest_results_to_excel(results, run_timestamp):
 
     try:
         wb.save(filename)
-        print(f"📤 Exported backtest results to Excel: {filename}")
+        print(f"Exported backtest results to Excel: {filename}")
         logger.info(f"Exported backtest results to Excel: {filename}")
     except Exception as e:
         logger.error(f"Failed to save backtest Excel file: {e}")

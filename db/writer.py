@@ -40,3 +40,31 @@ def save_run_and_results(rows, run_timestamp):
     finally:
         conn.close()
         logger.info(f"Saved {len(rows)} results for run {run_id} at {run_timestamp}")
+
+def update_watchlist_cache(bullish_results: list):
+    if not bullish_results:
+        return
+
+    rows = [
+        (
+            r["symbol"],
+            r["company_name"],
+            r["price"],
+            r["timestamp"]
+        )
+        for r in bullish_results
+    ]
+
+    query = """
+        INSERT INTO day_trading_screener.watchlist_cache (symbol, company_name, price, timestamp, updated_at)
+        VALUES %s
+        ON CONFLICT (symbol) DO UPDATE SET
+            company_name = EXCLUDED.company_name,
+            price = EXCLUDED.price,
+            timestamp = EXCLUDED.timestamp,
+            updated_at = NOW();
+    """
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            execute_values(cur, query, rows)

@@ -385,3 +385,66 @@ You now have:
 Per-function RateLimiters in fmp_client.py
 Protection against exceeding FMP’s rate limits
 Compatibility with multi-threaded execution via ThreadPoolExecutor
+
+=============== Throtteling
+Starter plan 5 per sec, 300 per minute
+RateLimiter changed from 5,1 to 4, 1 in fmp_client
+
+ ******************* Great — your objective is daily trading, which means: ****************************
+
+You want to enter trades intraday, ideally soon after the market opens.
+Your goal is to spot bullish setups forming in real time based on your multi-factor strategy.
+You're not scanning 10K penny stocks — your pipeline already filters intelligently.
+
+✅ Recommended Screener Execution Algorithm for Daily Trading
+📅 Market Day Timeline (U.S. Eastern Time)
+Phase	        Time (ET)	    Goal
+Pre-market	    8:00–9:30	    Prep watchlist (optional)
+Opening range	9:30–10:30	🟢 Primary opportunity window
+Midday/lull	    11:00–13:30	😴 Low momentum, avoid overtrading
+Power hour	    15:00–16:00	🔁 Re-check for afternoon moves
+
+---------
+🔁 Screener Algorithm Flow
+
+🔹 Step 1: Full Screener at Market Open (9:30 AM)
+Purpose: Identify bullish setups across entire universe (NASDAQ + NYSE).
+Inputs: All 2400–3000 tickers from core screener.
+Output: Flag bullish candidates + store top ~200 in a watchlist cache.
+Run time: ~60 minutes with throttling.
+✅ This creates your morning shortlist.
+
+🔹 Step 2: Watchlist Screener Every 15 Min (10:00–12:00)
+Purpose: Track technical evolution of ~200-300 tickers.
+Inputs: Watchlist from Step 1.
+Logic:
+Re-check only technicals (not fundamentals).
+Use updated prices, volume, RSI, EMA, MACD.
+Output: New bullish signals as they form intraday.
+✅ This allows you to act during the morning trend continuation phase.
+
+🔹 Step 3: Midday Pause or Sparse Monitoring (12:00–13:30)
+Option A: Pause screener (low volume phase).
+Option B: Run hourly on high volatility subset.
+✅ Prevents overtrading in low-momentum periods.
+
+🔹 Step 4: Optional Afternoon Sweep (15:00–15:45)
+Final full or watchlist scan to catch late breakouts.
+Could re-check tickers that were “almost bullish” earlier.
+✅ Useful for EOD entries or confirming ongoing positions.
+
+Summary Workflow
+Time Range	Action	Ticker Count
+09:30–10:30	🧠 Full scan (universe)	2400–3000
+Every 15 min	⏱️ Watchlist scan (bullish only)	200–300
+12:00–13:30	💤 (pause or reduce to 1/hour)	50–100
+15:00–15:45	🔁 Final full/partial scan (optional)	200–500
+
+Bonus: Watchlist Prioritization
+Prioritize watchlist tickers using:
+Pre-market movers
+High volume % gainers
+Beta > 1.5
+Volatility clusters (ATR, Bollinger breakout)
+Past bullish success rate
+
