@@ -448,3 +448,4 @@ Beta > 1.5
 Volatility clusters (ATR, Bollinger breakout)
 Past bullish success rate
 
+

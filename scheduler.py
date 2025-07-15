@@ -31,7 +31,7 @@ def get_dynamic_interval():
     else:
         return None
 
-def schedule_runner(limit, tighten, interval_minutes):
+def schedule_runner(limit, tighten, interval_minutes, log_level=logging.INFO, cooldown=30):
     logger = logging.getLogger("screener")
 
     logger.info(f"Scheduler started. Running every {interval_minutes} minutes.")
@@ -49,7 +49,12 @@ def schedule_runner(limit, tighten, interval_minutes):
                     continue
                 logger.info(f"Triggering run_screener() at {datetime.utcnow()}")
                 try:
-                    run_screener(limit=limit, use_optional_filters=tighten)
+                    run_screener(
+                        limit=limit,
+                        use_optional_filters=tighten,
+                        log_level=log_level,
+                        cooldown=cooldown,
+                    )
                 except Exception as e:
                     logger.error(f"Error during run: {e}")
                 logger.info(f"Sleeping for {interval_minutes} minutes...\n")
@@ -67,6 +72,7 @@ def main():
     parser.add_argument("--tighten", action="store_true")
     parser.add_argument("--interval", type=int, default=15, help="Minutes between screener runs")
     parser.add_argument("--test-mode", action="store_true", help="Run one dry cycle for test purposes")
+    parser.add_argument("--cooldown", type=int, default=30, help="Seconds to wait between batches")
     args = parser.parse_args()
 
     log_level = logging.DEBUG if args.debug else logging.INFO
@@ -89,7 +95,7 @@ def main():
         print(f"[TEST MODE] Dynamic interval: {get_dynamic_interval()}")
         return
 
-    schedule_runner(limit=args.limit, tighten=args.tighten, interval_minutes=args.interval)
+    schedule_runner(limit=args.limit, tighten=args.tighten, interval_minutes=args.interval, log_level=log_level, cooldown=args.cooldown)
 
 if __name__ == "__main__":
     main()

@@ -7,7 +7,7 @@ def main():
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     parser.add_argument("--limit", type=int, default=50, help="Number of tickers to screen")
     parser.add_argument("--tighten", action="store_true", help="Apply optional filters: beta > 1, market cap >= 2B, pre-market change > 1%")
-    parser.add_argument("--cooldown", type=int, default=3, help="Seconds to wait between batches")
+    parser.add_argument("--cooldown", type=int, default=30, help="Seconds to wait between batches")
     args = parser.parse_args()
 
     log_level = logging.DEBUG if args.debug else logging.INFO
