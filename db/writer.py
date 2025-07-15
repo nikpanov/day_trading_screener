@@ -1,6 +1,7 @@
 from db import get_connection
 from utils.logger import setup_logger
 from psycopg2.extras import execute_values
+from datetime import datetime
 
 logger = setup_logger()
 
@@ -21,9 +22,12 @@ def save_run_and_results(rows, run_timestamp):
                         row["symbol"],
                         row["company_name"],
                         row["price"],
-                        row["price"] > row["vwap"] if row["vwap"] else None,
-                        row["ema20"] > row["ema50"] if row["ema20"] and row["ema50"] else None,
-                        50 <= row["rsi14"] <= 70 if row["rsi14"] else None,
+                        # SAFE: price > vwap only if both are not None
+                        row["price"] > row["vwap"] if row["price"] is not None and row["vwap"] is not None else None,
+                        # SAFE: ema20 > ema50 only if both exist
+                        row["ema20"] > row["ema50"] if row.get("ema20") is not None and row.get("ema50") is not None else None,
+                        # SAFE: RSI in 50-70 range only if rsi14 exists
+                        50 <= row["rsi14"] <= 70 if row.get("rsi14") is not None else None,
                         1.0 if row["is_bullish"] else 0.0,
                         row["timestamp"]
                     )
@@ -41,6 +45,7 @@ def save_run_and_results(rows, run_timestamp):
         conn.close()
         logger.info(f"Saved {len(rows)} results for run {run_id} at {run_timestamp}")
 
+
 def update_watchlist_cache(bullish_results: list):
     if not bullish_results:
         return
@@ -50,21 +55,31 @@ def update_watchlist_cache(bullish_results: list):
             r["symbol"],
             r["company_name"],
             r["price"],
-            r["timestamp"]
+            r["timestamp"],   # timestamp is when scan ran
+            r["timestamp"]    # first_seen will be same initially
         )
         for r in bullish_results
     ]
 
     query = """
-        INSERT INTO day_trading_screener.watchlist_cache (symbol, company_name, price, timestamp, updated_at)
+        INSERT INTO day_trading_screener.watchlist_cache (symbol, company_name, price, timestamp, first_seen, updated_at)
         VALUES %s
-        ON CONFLICT (symbol) DO UPDATE SET
+        ON CONFLICT (symbol) DO UPDATE
+        SET
             company_name = EXCLUDED.company_name,
             price = EXCLUDED.price,
             timestamp = EXCLUDED.timestamp,
-            updated_at = NOW();
+            updated_at = NOW()
+        WHERE EXCLUDED.timestamp > watchlist_cache.timestamp;
+    """
+
+    delete_old_query = """
+        DELETE FROM watchlist_cache
+        WHERE DATE(timestamp) < CURRENT_DATE;
     """
 
     with get_connection() as conn:
         with conn.cursor() as cur:
+            # Optional: clear stale records first
+            cur.execute(delete_old_query)
             execute_values(cur, query, rows)

@@ -19,7 +19,7 @@ def now_et():
 
 logger = setup_logger()
 
-def run_screener(limit=50, use_optional_filters=False, log_level=logging.INFO, cooldown=10):
+def run_screener(limit=50, use_optional_filters=False, log_level=logging.INFO, cooldown=30, symbol_list=None):
     def chunkify(lst, batch_size):
         for i in range(0, len(lst), batch_size):
             yield lst[i:i + batch_size]
@@ -29,7 +29,10 @@ def run_screener(limit=50, use_optional_filters=False, log_level=logging.INFO, c
     logger.info(f"Screener run started at {run_timestamp.strftime('%Y-%m-%d %H:%M:%S %Z')} (limit={limit})")
 
     start_time = time.time()
-    results = fetch_core_screener(limit)
+    # results = fetch_core_screener(limit)
+    # When called with symbol_list, we skip the FMP screener and re-use previous tickers.
+    results = fetch_core_screener(limit) if symbol_list is None else [{"symbol": s} for s in symbol_list]
+
     all_results = []
     bullish_count = 0
     failed_count = 0
