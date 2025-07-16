@@ -6,3 +6,4 @@ pytest
 schedule
 pytz
 requests
+tenacity

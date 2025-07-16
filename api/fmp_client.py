@@ -72,19 +72,35 @@ def fetch_pre_market_change(symbol):
 
 @retry_with_backoff(logger=logger)
 @retry_on_429(logger=logger) 
-def fetch_core_screener(limit=50):
+def fetch_core_screener(limit=500, mode="default"):
     screener_limiter.wait()
-    url = f"{BASE_URL}/stock-screener"
+    base_url = f"{BASE_URL}/stock-screener"
+
+    # Default base params
     params = {
         "apikey": FMP_API_KEY,
-        "volumeMoreThan": 500000,
-        "priceMoreThan": 1,
-        "changeMoreThan": 2,
         "exchange": "NASDAQ,NYSE",
         "limit": limit
     }
+
+    if mode == "default":
+        params.update({
+            "volumeMoreThan": 500_000,
+            "priceMoreThan": 1,
+            "changeMoreThan": 2,
+            "sort": "volume"  # Or omit for raw order
+        })
+    elif mode == "final":
+        params.update({
+            "volumeMoreThan": 1_000_000,
+            "priceMoreThan": 5,
+            "changeMoreThan": 3,
+            "sort": "change"  # Top movers by % gain
+        })
+    elif mode == "debug":
+        params["limit"] = 5  # quick testing
     try:
-        response = requests.get(url, params=params)
+        response = requests.get(base_url, params=params)
         response.raise_for_status()
         return response.json()
     except Exception as e:

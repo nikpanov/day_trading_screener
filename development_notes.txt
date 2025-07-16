@@ -447,5 +447,13 @@ High volume % gainers
 Beta > 1.5
 Volatility clusters (ATR, Bollinger breakout)
 Past bullish success rate
+============= Immplementation
+📄 Download scheduler.py
 
+This version replaces the older one and implements:
+🧠 One-time full scan at market open (09:30–10:30)
+⏱️ Watchlist scans every 15 minutes (10:30–12:00 and 13:30–15:00)
+😴 Hourly scans during lunch (12:00–13:30)
+🔁 Optional final full scan (15:00–15:45)
+✅ All times are in US Eastern time with log output to logs/scheduler.log
 

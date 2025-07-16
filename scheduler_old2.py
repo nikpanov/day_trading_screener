@@ -1,13 +1,12 @@
+
 import time
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from runner.screener_runner import run_screener
+from db.reader import load_watchlist_symbols
 import pytz
 
-# Timezone for NYSE/NASDAQ market hours
 ET = pytz.timezone("US/Eastern")
-
-# Configure scheduler logger
 logger = logging.getLogger("scheduler")
 handler = logging.FileHandler("logs/scheduler.log", encoding="utf-8")
 formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
@@ -28,9 +27,7 @@ def should_run_every(last_run, interval_min):
     return (now_et() - last_run).total_seconds() >= interval_min * 60
 
 def scheduler_loop():
-    logger.info("Scheduler started.")
-    logger.info("Schedule summary: 09:30 full scan, 10:30–15:00 15-min scans, 12:00–13:30 hourly lunch mode, 15:00 final scan")
-
+    logger.info("📅 Scheduler started.")
     full_scan_done = None
     final_scan_done = None
     last_watchlist_scan = None
@@ -52,7 +49,7 @@ def scheduler_loop():
                 if should_run_every(last_watchlist_scan, 15):
                     logger.info("Running 15-min watchlist scan")
                     from watchlist_scan import run_watchlist_scan
-                    run_watchlist_scan(tighten=True, cooldown=30)
+                    run_watchlist_scan()
                     last_watchlist_scan = now
 
             # 💤 Lunch pause or slow scan from 12:00–13:30
@@ -61,9 +58,9 @@ def scheduler_loop():
                     logger.info("Entering lunch mode — slow scan")
                     lunch_mode = True
                 if should_run_every(last_watchlist_scan, 60):
-                    logger.info("Running hourly watchlist scan")
+                    logger.info("🍵 Running hourly watchlist scan")
                     from watchlist_scan import run_watchlist_scan
-                    run_watchlist_scan(tighten=True, cooldown=30)
+                    run_watchlist_scan()
                     last_watchlist_scan = now
 
             # 🔁 Resume 15-min scans after lunch
@@ -74,13 +71,13 @@ def scheduler_loop():
                 if should_run_every(last_watchlist_scan, 15):
                     logger.info("Running 15-min watchlist scan")
                     from watchlist_scan import run_watchlist_scan
-                    run_watchlist_scan(tighten=True, cooldown=30)
+                    run_watchlist_scan()
                     last_watchlist_scan = now
 
             # 🔁 Optional final full scan at 15:00–15:45
             elif should_run_once(final_scan_done, datetime.strptime("15:00", "%H:%M").time(), datetime.strptime("15:45", "%H:%M").time()):
-                logger.info("Running final full scan (mode=final)")
-                run_screener(limit=500, use_optional_filters=True, mode="final")
+                logger.info("Running final full scan")
+                run_screener(limit=500, use_optional_filters=True)
                 final_scan_done = now
 
         except Exception as e:
