@@ -19,7 +19,7 @@ def now_et():
 
 logger = setup_logger()
 
-def run_screener(limit=50, use_optional_filters=False, log_level=logging.INFO, cooldown=30, symbol_list=None):
+def run_screener(limit=50, use_optional_filters=False, log_level=logging.INFO, cooldown=30, watchlist_symbols=None):
     def chunkify(lst, batch_size):
         for i in range(0, len(lst), batch_size):
             yield lst[i:i + batch_size]
@@ -30,8 +30,28 @@ def run_screener(limit=50, use_optional_filters=False, log_level=logging.INFO, c
 
     start_time = time.time()
     # results = fetch_core_screener(limit)
-    # When called with symbol_list, we skip the FMP screener and re-use previous tickers.
-    results = fetch_core_screener(limit) if symbol_list is None else [{"symbol": s} for s in symbol_list]
+    # When called with watchlist_symbols, we skip the FMP screener and re-use previous tickers.
+    # results = fetch_core_screener(limit) if watchlist_symbols is None else [{"symbol": s} for s in watchlist_symbols]
+    if watchlist_symbols is None:
+        results = fetch_core_screener(limit)
+    else:
+        # enrich with cached metadata (name and price)
+        from db.reader import load_watchlist_metadata
+
+        if isinstance(watchlist_symbols[0], dict):  # from watchlist scan
+            symbols = [d["symbol"] for d in watchlist_symbols]
+        else:
+            symbols = watchlist_symbols
+
+        symbol_metadata = load_watchlist_metadata(symbols)
+        results = [
+            {
+                "symbol": symbol,
+                "company_name": symbol_metadata.get(symbol, {}).get("company_name", ""),
+                "price": symbol_metadata.get(symbol, {}).get("price", None)
+            }
+            for symbol in watchlist_symbols
+        ]
 
     all_results = []
     bullish_count = 0
@@ -117,7 +137,15 @@ def run_screener(limit=50, use_optional_filters=False, log_level=logging.INFO, c
             if i * batch_size < limit:
                 logger.info(f"Cooldown for {cooldown} seconds before next batch...")
                 time.sleep(cooldown)
+    
+    # Calculate bullish duration for each result
+    for row in all_results:
+        if row.get("first_seen"):
+            row["bullish_duration"] = (datetime.now(timezone.utc) - row["first_seen"]).days
+        else:
+            row["bullish_duration"] = 0
 
+    
     save_run_and_results(all_results, run_timestamp)
     export_screener_results_to_excel(all_results, run_timestamp)
 

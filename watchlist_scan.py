@@ -26,7 +26,7 @@ def main():
         use_optional_filters=args.tighten,
         log_level=log_level,
         cooldown=args.cooldown,
-        symbol_list=watchlist
+        watchlist_symbols=watchlist
     )
 
 if __name__ == "__main__":

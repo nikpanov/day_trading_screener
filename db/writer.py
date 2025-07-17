@@ -48,6 +48,7 @@ def save_run_and_results(rows, run_timestamp):
 
 def update_watchlist_cache(bullish_results: list):
     if not bullish_results:
+        logger.info("No bullish tickers to update in watchlist cache.")
         return
 
     rows = [
@@ -55,14 +56,17 @@ def update_watchlist_cache(bullish_results: list):
             r["symbol"],
             r["company_name"],
             r["price"],
-            r["timestamp"],   # timestamp is when scan ran
-            r["timestamp"]    # first_seen will be same initially
+            r["timestamp"],  # timestamp = time of detection
+            r["timestamp"],  # first_seen = first time it's added
         )
         for r in bullish_results
+        if r.get("symbol") and r.get("price") is not None and r.get("timestamp")  # prevent nulls
     ]
 
-    query = """
-        INSERT INTO day_trading_screener.watchlist_cache (symbol, company_name, price, timestamp, first_seen, updated_at)
+    insert_query = """
+        INSERT INTO day_trading_screener.watchlist_cache (
+            symbol, company_name, price, timestamp, first_seen
+        )
         VALUES %s
         ON CONFLICT (symbol) DO UPDATE
         SET
@@ -70,16 +74,18 @@ def update_watchlist_cache(bullish_results: list):
             price = EXCLUDED.price,
             timestamp = EXCLUDED.timestamp,
             updated_at = NOW()
-        WHERE EXCLUDED.timestamp > watchlist_cache.timestamp;
+        WHERE EXCLUDED.timestamp > day_trading_screener.watchlist_cache.timestamp;
     """
 
     delete_old_query = """
-        DELETE FROM watchlist_cache
+        DELETE FROM day_trading_screener.watchlist_cache
         WHERE DATE(timestamp) < CURRENT_DATE;
     """
 
     with get_connection() as conn:
         with conn.cursor() as cur:
-            # Optional: clear stale records first
             cur.execute(delete_old_query)
-            execute_values(cur, query, rows)
+            execute_values(cur, insert_query, rows)
+
+    logger.info(f"Watchlist cache updated with {len(rows)} bullish tickers.")
+
