@@ -51,17 +51,20 @@ def update_watchlist_cache(bullish_results: list):
         logger.info("No bullish tickers to update in watchlist cache.")
         return
 
-    rows = [
-        (
-            r["symbol"],
-            r["company_name"],
-            r["price"],
-            r["timestamp"],  # timestamp = time of detection
-            r["timestamp"],  # first_seen = first time it's added
-        )
-        for r in bullish_results
-        if r.get("symbol") and r.get("price") is not None and r.get("timestamp")  # prevent nulls
-    ]
+    symbols_today = set()
+    rows = []
+
+    for r in bullish_results:
+        if r.get("symbol") and r.get("price") is not None and r.get("timestamp"):
+            symbol = r["symbol"]
+            symbols_today.add(symbol)
+            rows.append((
+                symbol,
+                r["company_name"],
+                r["price"],
+                r["timestamp"],  # timestamp = detection time
+                r["timestamp"],  # first_seen = same for new records
+            ))
 
     insert_query = """
         INSERT INTO day_trading_screener.watchlist_cache (
@@ -77,15 +80,19 @@ def update_watchlist_cache(bullish_results: list):
         WHERE EXCLUDED.timestamp > day_trading_screener.watchlist_cache.timestamp;
     """
 
-    delete_old_query = """
+    delete_query = """
         DELETE FROM day_trading_screener.watchlist_cache
-        WHERE DATE(timestamp) < CURRENT_DATE;
+        WHERE symbol NOT IN %s;
     """
 
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(delete_old_query)
+            # ✅ Upsert today's bullish tickers
             execute_values(cur, insert_query, rows)
 
-    logger.info(f"Watchlist cache updated with {len(rows)} bullish tickers.")
+            # ❌ Delete any tickers no longer bullish
+            cur.execute(delete_query, (tuple(symbols_today),))
+
+    logger.info(f"Watchlist cache updated: {len(rows)} bullish tickers kept or added. Others removed.")
+
 

@@ -1,4 +1,4 @@
-# run_full_scan.py
+# run_full_scan_test.py
 from runner.screener_runner import run_screener
 from db.writer import  update_watchlist_cache
 from db.reader import get_last_run_id, fetch_screener_results
