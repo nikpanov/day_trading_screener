@@ -1,28 +1,89 @@
+
 # Day Trading Screener
 
-A day trading stock screener using real-time market data and PostgreSQL.
+A modular Python application for identifying bullish trading signals using real-time stock data and technical indicators. This tool supports full market scans, watchlist-based scans, and automated scheduling for intra-day screening.
 
-## Features
-- Core and technical filters for intraday momentum
-- PostgreSQL schema for screener runs, results, technicals, and caching
-- Output to XLSX for inspection or reporting
-- Modular and testable with pytest
+## 🔧 Features
 
-## Setup
-1. Create `.env` file based on `.env.example`
-2. Create a virtual environment:
-python -m venv .venv
-.venv/Scripts/activate 
+- Fetches real-time stock data from Financial Modeling Prep API
+- Detects bullish trends based on:
+  - RSI, EMA, VWAP, volume, price action, and pre-market movement
+- Automatically stores results in PostgreSQL (`screener_run`, `stock_result`, `watchlist_cache`)
+- Schedules scans based on trading hours using `scheduler.py`
+- Highlights results in Excel and sends summary emails
+
+## 🚀 Getting Started
+
+### 1. Install Dependencies
+
+```bash
 pip install -r requirements.txt
-3. Run the schema setup
+```
 
-4. Run tests
+### 2. Configure Environment
 
-## Main functionality
-main.py
-│
-├── fetch_core_screener()      → from FMP (volume, rel vol, % change, etc.)
-├── enrich_technicals()        → VWAP, EMA, RSI
-├── apply_filters()            → VWAP > price, 20 EMA > 50 EMA, RSI ∈ (50, 70)
-├── write_to_db()              → Save to PostgreSQL
-└── export_to_excel()          → Save to output/
+Create a `.env` file with:
+
+```
+FMP_API_KEY=your_api_key_here
+EMAIL_SENDER=sender@example.com
+EMAIL_RECEIVER=receiver@example.com
+EMAIL_PASSWORD=your_password
+DB_NAME=your_db
+DB_USER=your_user
+DB_PASSWORD=your_pass
+DB_HOST=localhost
+DB_PORT=5432
+```
+
+### 3. Run Manually
+
+**Full scan:**
+
+```bash
+python run_full_scan.py
+```
+
+**Watchlist scan:**
+
+```bash
+python watchlist_scan.py --tighten
+```
+
+## ⏰ Automated Scanning
+
+Use Task Scheduler or cron to run:
+
+```bash
+python scheduler.py
+```
+
+It performs:
+- Full scan at 09:30
+- 15-min scans 10:30–12:00 and 13:30–15:00
+- Hourly lunch scan 12:00–13:30
+
+## 📁 Project Structure
+
+```
+day_trading_screener/
+├── api/                   # FMP API clients
+├── db/                    # DB readers/writers and caching
+├── runner/                # Screener execution logic
+├── utils/                 # Filters, logger, emailer
+├── output/                # Generated Excel files
+├── scheduler.py           # Orchestrates scan schedule
+├── run_full_scan.py       # Full scan + cache update
+├── watchlist_scan.py      # Re-scans only watchlist tickers
+├── requirements.txt
+```
+
+## 📊 Output
+
+- Excel files saved under `output/screener_results/`
+- Summary emails sent with results and top bullish tickers
+- PostgreSQL DB stores detailed historical signals
+
+## ✅ Status
+
+Production-ready for scheduled screening and email alerts.
