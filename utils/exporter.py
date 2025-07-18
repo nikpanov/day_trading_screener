@@ -28,11 +28,17 @@ def export_screener_results_to_excel(rows, run_timestamp):
     df = df[expected_columns]
 
     # Remove tzinfo
+    # if "timestamp" in df.columns:
+    #     df["timestamp"] = pd.to_datetime(df["timestamp"]).dt.tz_localize(None)
     if "timestamp" in df.columns:
-        df["timestamp"] = pd.to_datetime(df["timestamp"]).dt.tz_localize(None)
+        df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True).dt.tz_convert("US/Eastern").dt.tz_localize(None)
+        
 
-    run_timestamp_naive = run_timestamp.replace(tzinfo=None) if run_timestamp.tzinfo else run_timestamp
-    filename = f"output/screener_results/screener_results_{run_timestamp_naive.strftime('%Y-%m-%d_%H%M')}.xlsx"
+    # run_timestamp_naive = run_timestamp.replace(tzinfo=None) if run_timestamp.tzinfo else run_timestamp
+    # filename = f"output/screener_results/screener_results_{run_timestamp_naive.strftime('%Y-%m-%d_%H%M')}.xlsx"
+    run_timestamp_et = run_timestamp.astimezone(ET).replace(tzinfo=None)
+    filename = f"output/screener_results/screener_results_{run_timestamp_et.strftime('%Y-%m-%d_%H%M')}.xlsx"
+
 
     wb = Workbook()
     ws = wb.active
@@ -88,8 +94,11 @@ def export_backtest_results_to_excel(results, run_timestamp):
         "sell_date", "gain_pct", "holding_days", "result"
     ])
 
-    run_timestamp_naive = run_timestamp.replace(tzinfo=None) if run_timestamp.tzinfo else run_timestamp
-    filename = f"output/backtest_results/backtest_results_{run_timestamp_naive.strftime('%Y-%m-%d_%H%M')}.xlsx"
+    # run_timestamp_naive = run_timestamp.replace(tzinfo=None) if run_timestamp.tzinfo else run_timestamp
+    # filename = f"output/backtest_results/backtest_results_{run_timestamp_naive.strftime('%Y-%m-%d_%H%M')}.xlsx"
+    run_timestamp_et = run_timestamp.astimezone(ET).replace(tzinfo=None)
+    filename = f"output/screener_results/backtest_results_{run_timestamp_et.strftime('%Y-%m-%d_%H%M')}.xlsx"
+
 
     wb = Workbook()
     ws = wb.active

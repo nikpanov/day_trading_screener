@@ -1,3 +1,4 @@
+
 from api.fmp_client import fetch_core_screener, fetch_technicals, fetch_fundamentals, fetch_pre_market_change
 from utils.filters import is_bullish
 from db.writer import save_run_and_results
@@ -9,7 +10,7 @@ from db.cache import upsert_screener_cache, upsert_premarket_cache
 import logging
 from datetime import datetime, timezone
 from pytz import timezone as pytz_timezone
-from config.settings import BATCH_SIZE, COOLDOWN_SECONDS
+import traceback
 
 ET = pytz_timezone("US/Eastern")
 
@@ -18,7 +19,7 @@ def now_et():
 
 logger = setup_logger()
 
-def run_screener(limit=50, use_optional_filters=False, log_level=logging.INFO, watchlist_symbols=None):
+def run_screener(limit=50, use_optional_filters=False, log_level=logging.INFO, cooldown=30, watchlist_symbols=None):
     def chunkify(lst, batch_size):
         for i in range(0, len(lst), batch_size):
             yield lst[i:i + batch_size]
@@ -28,10 +29,13 @@ def run_screener(limit=50, use_optional_filters=False, log_level=logging.INFO, w
     logger.info(f"Screener run started at {run_timestamp.strftime('%Y-%m-%d %H:%M:%S %Z')} (limit={limit})")
 
     start_time = time.time()
-
+    # results = fetch_core_screener(limit)
+    # When called with watchlist_symbols, we skip the FMP screener and re-use previous tickers.
+    # results = fetch_core_screener(limit) if watchlist_symbols is None else [{"symbol": s} for s in watchlist_symbols]
     if watchlist_symbols is None:
         results = fetch_core_screener(limit)
     else:
+        # enrich with cached metadata (name and price)
         from db.reader import load_watchlist_metadata
 
         if isinstance(watchlist_symbols[0], dict):  # from watchlist scan
@@ -44,8 +48,7 @@ def run_screener(limit=50, use_optional_filters=False, log_level=logging.INFO, w
             {
                 "symbol": symbol,
                 "company_name": symbol_metadata.get(symbol, {}).get("company_name", ""),
-                "price": symbol_metadata.get(symbol, {}).get("price", None),
-                "first_seen": symbol_metadata.get(symbol, {}).get("first_seen")  # used for duration
+                "price": symbol_metadata.get(symbol, {}).get("price", None)
             }
             for symbol in watchlist_symbols
         ]
@@ -56,7 +59,7 @@ def run_screener(limit=50, use_optional_filters=False, log_level=logging.INFO, w
 
     def analyze_stock(stock):
         symbol = stock["symbol"]
-        name = stock.get("company_name", stock.get("companyName", ""))
+        name = stock.get("companyName", "")
         price = stock.get("price")
         logger.info(f"{symbol} - {name}")
 
@@ -93,7 +96,6 @@ def run_screener(limit=50, use_optional_filters=False, log_level=logging.INFO, w
                 **indicators,
                 "is_bullish": is_bullish_flag,
                 "timestamp": run_timestamp,
-                "first_seen": stock.get("first_seen"),
                 "failure_reason": "; ".join(reasons) if reasons else ""
             }
 
@@ -107,7 +109,9 @@ def run_screener(limit=50, use_optional_filters=False, log_level=logging.INFO, w
             logger.warning(f"{symbol} - error: {e}")
             return {"failed": True}
 
-    batch_size = BATCH_SIZE    
+
+
+    batch_size = 30    
     with ThreadPoolExecutor(max_workers=8) as executor:
         for i, batch in enumerate(chunkify(results, batch_size), start=1):
             logger.info(f"Processing batch {i} with {len(batch)} stocks...")
@@ -131,15 +135,17 @@ def run_screener(limit=50, use_optional_filters=False, log_level=logging.INFO, w
                     bullish_count += 1
 
             if i * batch_size < limit:
-                logger.info(f"Cooldown for {COOLDOWN_SECONDS} seconds before next batch...")
-                time.sleep(COOLDOWN_SECONDS)
-
+                logger.info(f"Cooldown for {cooldown} seconds before next batch...")
+                time.sleep(cooldown)
+    
+    # Calculate bullish duration for each result
     for row in all_results:
         if row.get("first_seen"):
             row["bullish_duration"] = (datetime.now(timezone.utc) - row["first_seen"]).days
         else:
             row["bullish_duration"] = 0
 
+    
     save_run_and_results(all_results, run_timestamp)
     export_screener_results_to_excel(all_results, run_timestamp)
 

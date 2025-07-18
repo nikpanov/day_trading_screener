@@ -62,8 +62,8 @@ def update_watchlist_cache(bullish_results: list):
                 symbol,
                 r["company_name"],
                 r["price"],
-                r["timestamp"],
-                r["timestamp"]
+                r["timestamp"],  # timestamp = detection time
+                r["timestamp"],  # first_seen = same for new records
             ))
 
     insert_query = """
@@ -87,33 +87,13 @@ def update_watchlist_cache(bullish_results: list):
 
     with get_connection() as conn:
         with conn.cursor() as cur:
+            # ✅ Upsert today's bullish tickers
             execute_values(cur, insert_query, rows)
+
+            # ❌ Delete any tickers no longer bullish
             cur.execute(delete_query, (tuple(symbols_today),))
 
     logger.info(f"Watchlist cache updated: {len(rows)} bullish tickers kept or added. Others removed.")
 
 
-def cleanup_screener_cache(days=14):
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                DELETE FROM day_trading_screener.screener_cache
-                WHERE timestamp < NOW() - INTERVAL '%s days';
-            """, (days,))
-    logger.info(f"Screener cache cleanup complete — entries older than {days} days removed.")
 
-def cleanup_premarket_cache():
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                DELETE FROM day_trading_screener.premarket_cache
-                WHERE DATE(fetched_at) < CURRENT_DATE;
-            """)
-
-def cleanup_quote_cache(days=30):
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                DELETE FROM day_trading_screener.quote_cache
-                WHERE fetched_at < NOW() - INTERVAL '%s days'
-            """, (days,))
