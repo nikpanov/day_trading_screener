@@ -1,13 +1,12 @@
 
 import time
 import logging
-from datetime import datetime
+from datetime import datetime, time as dtime
 import pytz
-from run_full_scan import run_full_scan
-from config.settings import WATCHLIST_SCAN_LIMIT, COOLDOWN_SECONDS, TIGHTEN
+from runner.screener_runner import run_screener
 from watchlist_scan import run_watchlist_scan
-from db.writer import cleanup_screener_cache, cleanup_premarket_cache, cleanup_quote_cache
-
+from db.reader import get_last_run_time
+from emailer.notify import send_email_notification
 
 ET = pytz.timezone("US/Eastern")
 
@@ -34,6 +33,8 @@ def scheduler_loop():
     logger.info("Scheduler started.")
     logger.info("Schedule summary: 09:30 full scan, 10:30–15:00 15-min scans, 12:00–13:30 hourly lunch mode, 15:00 final scan")
 
+    last_known_run = get_last_run_time()
+
     full_scan_done = None
     final_scan_done = None
     last_watchlist_scan = None
@@ -43,51 +44,59 @@ def scheduler_loop():
         now = now_et()
         current_time = now.time()
 
+        # ✅ Check for missed runs
+        if last_known_run and (now - last_known_run).total_seconds() > 60 * 60:
+            msg = f"No screener run recorded in the last hour.\nLast run: {last_known_run.strftime('%Y-%m-%d %H:%M:%S')}"
+            logger.warning(msg)
+            try:
+                send_email_notification(subject="Screener Inactive Warning", body=msg)
+            except Exception as e:
+                logger.error(f"Failed to send inactivity alert: {e}")
+
         try:
-            if should_run_once(full_scan_done, datetime.strptime("09:30", "%H:%M").time(), datetime.strptime("10:30", "%H:%M").time()):
+            if should_run_once(full_scan_done, dtime(9, 30), dtime(10, 30)):
                 logger.info("Running full scan (morning)")
-                run_full_scan()
+                run_screener(limit=2500, use_optional_filters=True)
+                last_known_run = now_et()
+                full_scan_done = now_et()
 
-                # ✅ Cleanup old screener_cache entries                
-                cleanup_screener_cache(days=14)
-                cleanup_premarket_cache()
-                cleanup_quote_cache(days=30)
-
-                full_scan_done = now
-
-            elif datetime.strptime("10:30", "%H:%M").time() <= current_time < datetime.strptime("12:00", "%H:%M").time():
+            elif dtime(10, 30) <= current_time < dtime(12, 0):
                 if should_run_every(last_watchlist_scan, 15):
-                    logger.info("Running 15-min watchlist scan")                    
-                    run_watchlist_scan(tighten=TIGHTEN)
-                    last_watchlist_scan = now
+                    logger.info("Running 15-min watchlist scan")
+                    run_watchlist_scan(tighten=True, cooldown=30)
+                    last_known_run = now_et()
+                    last_watchlist_scan = now_et()
 
-            elif datetime.strptime("12:00", "%H:%M").time() <= current_time < datetime.strptime("13:30", "%H:%M").time():
+            elif dtime(12, 0) <= current_time < dtime(13, 30):
                 if not lunch_mode:
-                    logger.info("Entering lunch mode — hourly scan")
+                    logger.info("Entering lunch mode — slow scan")
                     lunch_mode = True
                 if should_run_every(last_watchlist_scan, 60):
-                    logger.info("🍵 Running hourly watchlist scan")
-                    run_watchlist_scan(tighten=TIGHTEN)
-                    last_watchlist_scan = now
+                    logger.info("Running hourly watchlist scan")
+                    run_watchlist_scan(tighten=True, cooldown=30)
+                    last_known_run = now_et()
+                    last_watchlist_scan = now_et()
 
-            elif datetime.strptime("13:30", "%H:%M").time() <= current_time < datetime.strptime("15:00", "%H:%M").time():
+            elif dtime(13, 30) <= current_time < dtime(15, 0):
                 if lunch_mode:
                     logger.info("Exiting lunch mode — resume 15-min scans")
                     lunch_mode = False
                 if should_run_every(last_watchlist_scan, 15):
                     logger.info("Running 15-min watchlist scan")
-                    run_watchlist_scan(tighten=TIGHTEN)
-                    last_watchlist_scan = now
+                    run_watchlist_scan(tighten=True, cooldown=30)
+                    last_known_run = now_et()
+                    last_watchlist_scan = now_et()
 
-            elif should_run_once(final_scan_done, datetime.strptime("15:00", "%H:%M").time(), datetime.strptime("15:45", "%H:%M").time()):
+            elif should_run_once(final_scan_done, dtime(15, 0), dtime(15, 45)):
                 logger.info("Running final full scan (mode=final)")
-                run_full_scan(mode="final")
-                final_scan_done = now
+                run_screener(limit=500, use_optional_filters=True, mode="final")
+                last_known_run = now_et()
+                final_scan_done = now_et()
 
         except Exception as e:
             logger.error(f"Error during scheduler loop: {e}")
 
-        time.sleep(30) # Sleep to avoid busy-waiting
+        time.sleep(30)
 
 if __name__ == "__main__":
     scheduler_loop()
